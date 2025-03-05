@@ -48,7 +48,7 @@ function App() {
         Incomming Soon!
       </a></div>
       <p className="read-the-docs">
-        Github Pages Website for showcasing some projects, blogs, and more
+        Github Pages Website for showcasing projects, blogs, and more
         <br />
         - Paul Basinger
       </p>
