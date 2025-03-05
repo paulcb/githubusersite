@@ -9,11 +9,11 @@ function App() {
 
       const val1 = import.meta.env.VITE_VAL1;
       const val2 = import.meta.env.VITE_VAL2;
-
+      const linksFromEnv = {appLink: val1, codeLink: val2};
       //unecessary link ascii encoding/decoding for run...
       // const val1Arry = new Uint8Array(val1.split(',').map(x => Number(x)));
       // const decodedVal1 = new TextDecoder().decode(val1Arry);
-      setLinks([val1, val2]);
+      setLinks(linksFromEnv);
     }
   }, [links]);
 
@@ -22,11 +22,11 @@ function App() {
       <div className="card">
         <div className="cardDate">3/3/2025</div>
         <div style={{ display: 'inline' }}>
-          <a className="carda" href={links[0]}>
+          <a className="carda" href={links.appLink}>
             aMazeThing
           </a>
           &nbsp;--&nbsp;
-          <a className="carda" href={links[1]}>
+          <a className="carda" href={links.codeLink}>
             code
           </a>
         </div>
