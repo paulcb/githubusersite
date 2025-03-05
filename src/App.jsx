@@ -9,12 +9,11 @@ function App() {
 
       const val1 = import.meta.env.VITE_VAL1;
       const val2 = import.meta.env.VITE_VAL2;
-      const val3 = import.meta.env.VITE_VAL3;
 
       //unecessary link ascii encoding/decoding for run...
       // const val1Arry = new Uint8Array(val1.split(',').map(x => Number(x)));
       // const decodedVal1 = new TextDecoder().decode(val1Arry);
-      setLinks([val1, val2, val3]);
+      setLinks([val1, val2]);
     }
   }, [links]);
 
@@ -26,13 +25,9 @@ function App() {
           <a className="carda" href={links[0]}>
             aMazeThing
           </a>
-          --
+          &nbsp;--&nbsp;
           <a className="carda" href={links[1]}>
-            Frontend React code
-          </a>
-          --
-          <a className="carda" href={links[2]}>
-            AWS CDK code
+            code
           </a>
         </div>
         <p>
