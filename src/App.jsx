@@ -40,6 +40,27 @@ def process_key(self, conn, key, count, threadNumber):
       conn.set(key, json.dumps(value))
   `;
 
+  let dockerCompose = `
+services:
+  postgresql-cache-test:
+    build:
+      context: .
+      dockerfile: ./DockerfilePostgresql
+    ports:
+      - "\${POSTGRES_PORT}:5432"
+    environment:
+      PGDATA: /var/lib/postgresql/data/data1/
+      POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}
+  redis-cache-test:
+    image: "redis/redis-stack:latest"
+    ports:
+      - "\${REDIS_PORT}:6379"
+  memcached-cache-test:
+    image: "memcached"
+    ports:
+      - "\${MEMCACHED_PORT}:11211"
+`;
+
   return (
     <>
       <div className="card">
@@ -91,8 +112,10 @@ def process_key(self, conn, key, count, threadNumber):
 
           <br /><br />
 
+          <a href="url">https://github.com/paulcb/amazething-website-cdk/blob/main/lib/common/maze-generator.ts</a>
+          
           <pre>
-            <code class="language-python">
+            <code class="language-python" style={{fontSize: '13px'}}>
               {codeString}
             </code>
           </pre>
@@ -128,16 +151,22 @@ def process_key(self, conn, key, count, threadNumber):
           <br /><br />
 
           Perhaps I’ll explore later what a last used time could do to make a PostgreSQL cache more LRU like.
+          <br /><br />
+          <br /><br />
+          <b>More on infrastructure and code:</b>
+          <br /><br />
+
+          Docker Compose was used to make PostgreSQL with pg_cron, Redis, and Memcached container instances. The container_config folder has the compose.yaml and Dockerfile settings. The PostgreSQL pg_cron Dockerfile and scripts were implemented referencing [3] which was super useful and one of first posts I looked at regard PostgreSQL caching.
 
           <br /><br />
 
-          Code:
-
-          <br /><br />
-
-          Docker Compose was used to make PostgreSQL with pg_cron, Redis, and Memcached container instances. The container_config folder has the compose.yaml and Dockerfile settings.
-
-          <br /><br />
+          <a href="url">https://github.com/paulcb/amazething-website-cdk/blob/main/lib/common/maze-generator.ts</a>
+          
+          <pre>
+            <code class="language-python" style={{fontSize: '13px'}}>
+              {dockerCompose}
+            </code>
+          </pre>
 
           The driver for testing was Python since some easy to use libraries for Redis and Memcached exist.
 
