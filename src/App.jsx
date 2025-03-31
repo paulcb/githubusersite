@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import './App.css'
-import stat1 from './assets/trace_stats.png'
+import stat1 from './assets/Table1.png'
 import stat2 from './assets/trace_error.png'
 import Prism from "prismjs";
 
