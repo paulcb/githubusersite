@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import './App.css'
-import stat1 from './assets/Table1.png'
-import stat2 from './assets/trace_error.png'
+import statTable1 from './assets/Table1.1.png'
+import statTable2 from './assets/Table2.1.png'
+import statTable3 from './assets/Table3.png'
+import statTable4 from './assets/Table4.png'
+import errorImage from './assets/trace_error.png'
 import Prism from "prismjs";
 
 function App() {
@@ -31,17 +34,18 @@ def process_key(self, conn, key, count, threadNumber):
   # is there a key already in the cache
   if conn.exists(key):
       value = json.loads(conn.get(key))
-      self.log_cache(threadNumber, count, stime, key, value, True, False)
+      self.log_cache(threadNumber, count, stime, key, value, True)
   else:
       # no key in the cache, so now grab the database value and populate the cache
       value = fetch_data(self.table_name, key, self.Session)
       self.log_cache(threadNumber, count, stime,
-                      key, value, False, False)
+                      key, value, False)
       conn.set(key, json.dumps(value))
   `;
 
   let dockerCompose = `
-services:
+
+  services:
   postgresql-cache-test:
     build:
       context: .
@@ -52,13 +56,43 @@ services:
       PGDATA: /var/lib/postgresql/data/data1/
       POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}
   redis-cache-test:
-    image: "redis/redis-stack:latest"
+    # image: "redis/redis-stack"
+    build:
+      context: .
+      dockerfile: ./DockerfileRedis
     ports:
       - "\${REDIS_PORT}:6379"
   memcached-cache-test:
     image: "memcached"
     ports:
       - "\${MEMCACHED_PORT}:11211"
+
+`;
+
+  let cacheWorkerCode = `
+def cache_worker(self, threadNumber):
+  # child class specific
+  cache_conn = self.create_connection()
+  while True:
+    key, count, queue_empty = self.next_queue_value()
+    
+    if queue_empty:
+        break
+
+    if key is None:
+        continue
+
+    self.process_key(cache_conn, key, count, threadNumber)
+`;
+
+let appFiles = `
+ls -1 cache_test_app/
+README.md
+app
+container_config
+logs
+requirements.txt
+scripts
 `;
 
   return (
@@ -101,10 +135,10 @@ services:
           </a>
         </div>
         <p>
-          Caching software like Redis and Memcached are gotos for speeding up requests between client and server. Lately, there have been examples showing PostgreSQL’s ability to cache data which might already exist in a platform's infrastructure. Using already existing infrastructure is a pragmatic way to gain performance. How does PostgreSQL’s cache mechanism compare to existing caching software?
+          Caching software like Redis and Memcached are gotos for speeding up requests between client and server. Lately, there have been examples showing PostgreSQL’s ability to cache data which might already exist in a platform's infrastructure <a href="https://martinheinz.dev/blog/105">[1]</a>. Using already existing infrastructure is a pragmatic way to gain performance. How does PostgreSQL’s cache mechanism compare to existing caching software?
           <br /><br />
 
-          In this post, runtimes and mean response times for cache hits and misses are tested for four caching methods, Redis, Memcached, PostgreSQL Unlogged Table, and Python dictionary are analyzed. Single instances are used with Python multithreading to simulate concurrent requests. For realistic testing, trace files from “ARC: A SELF-TUNING, LOW OVERHEAD REPLACEMENT CACHE” (ARC paper) are used in testing [2]. Also, a few randomized trace files were generated.
+          In this post, runtimes and mean response times for cache hits and misses are tested for four caching methods, Redis, Memcached, PostgreSQL Unlogged Table, and Python Cache are analyzed. Single instances are used with Python multithreading to simulate concurrent requests. For realistic testing, trace files from “ARC: A SELF-TUNING, LOW OVERHEAD REPLACEMENT CACHE” (ARC paper) are used in testing [2] [3]. Also, a few randomized trace files were generated.
 
           <br /><br />
 
@@ -112,81 +146,134 @@ services:
 
           <br /><br />
 
-          <a href="url">https://github.com/paulcb/amazething-website-cdk/blob/main/lib/common/maze-generator.ts</a>
-          
-          <pre>
-            <code class="language-python" style={{fontSize: '13px'}}>
-              {codeString}
-            </code>
-          </pre>
+          In the Table 1 below, Memcached shows significant write latency. Redis is overall probably the best choice since it offers best read and write latency. PostgreSQL is what one would expect, an OK choice. This is just randomly generated test data. Let's try the ARC paper's trace data in the Table 3.
+
+          <br /><br />
+          <p>Table 1 - Cache value sizes all 16 bytes - 2 Threads</p>
+          <img src={statTable2} alt="logo" />
 
           <br /><br />
 
-          <img src={stat1} alt="logo" />
+          Something to think about is that better performance is achieved on reads in PostgreSQL if a standard database table is used to pull from. Using a PostgreSQL Cache will have benefits on writes [2] and storing unstructured data from more complex queries. Larger databases and doing JOINs, PARTIONs, and or GROUP BY queries could benefit from a cache storing unstructured the data in JSONB attribute. This post is looking general response time and comparing to other caching methods. Perhaps this more complex usage could be included and analyzed later. More complexities would be introduced such as ejecting cache entries on main table updates. See Table 2 showing no cache table reads and a cache table with unlogged tag removed. There is a performance gained to using UNLOGGED tables as shown. Moreoever, using a single thread helps performance on all cache types because of queuing within the services which operate on data sequentily. So 2 threads are used in these tests to simulate a more realistic environment.
 
           <br /><br />
 
-          Memcached has a significant write latency while giving the best read latency. Redis is overall probably the best choice since it offers best read and write latency. PostgreSQL is what one would expect, an OK choice.
+          <p>Table 2 - Things to consider</p>
+          <img src={statTable4} alt="logo" />
 
           <br /><br />
 
-          Here's an interesting issue that occurred with PostgreSQL.
+          With realistic traces, performance is similar with the Python Cache performing best since it's a runtime cache in the test suite to show raw performance without a connection in the way. Memcached was left out of these tests given significant write latency. So far though, all these tests have given max memory for the cache types. Let's enable LRU for Redis and Python Cache.
 
           <br /><br />
 
-          <img src={stat2} alt="logo" />
+          <p>Table 3 - Cache value 16 bytes times number of blocks in trace file - 2 Threads</p>
+          <img src={statTable1} alt="logo" />
+
+          <br /><br />
+          <p>
+            Table 4 - LRU Redis and Python Cache, PostgreSQL pg_cron enabled (remove in cache if greater than 5 mins old) - 2 Threads
+          </p>
+
+
+          <img src={statTable3} alt="logo" />
+
+          <br />
+          pg_cron setting was based of initial runtime of OLTP.lis of ~ 16 minutes for PostgreSQL Cache and ejecting 5 minutie of cache items. With about 1/3 the runtime in mind, the LRU cache sizes were made 1/3 size of number of keys. This works for OLTP.lis since the block sizes are all the same so with varying blocks an averaged approach would be beter. And in Table 4 the reduction in mean response and throughput show the effect of the cache size / pg_cron setting.
+          <br />
+          <br />
+          Cache size for Redis and Python Cache based on 1/3 size of OLTP.lis key count (186,880) and 512 block value
+          <br />
+          <br />
+          Cache size set from ((512 * 186880 / 1024 / 1024) / 3) = ~ 30 Mb
+
+          <br /><br />
+
+          When enabling the cache policies, a similuar performance to max memory is seen. This could be enough to say that no matter what policy is enabled in PosgreSQL with pg_cron, Redis is going to be the better choice for performance. Hang on though.
+
+          <br /><br />
+
+          To speak to the inconsistency of Redis and Python Cache using an LRU vs. the pg_cron method in PostgreSQL, an unlogged table could be given a last used attribute, but it would require a write during the which feels icky when actually trying to represent a cache. I’m pretty sure Redis and Memcache use a more clever approach and move a recently read identifier from its place in a doubly linked list to the front of it. This allows for constant time updating which I've seen implemented before. With PostgreSQL there's isn't going to be a constant time update so at least for tests here, the remove oldest cache times will be used.
+
+          <br /><br />
+
+          <br /><br />
+          <b>Here's an interesting issue that occurred with PostgreSQL.</b>
+          <br /><br />
+
+          <img src={errorImage} alt="logo" />
 
           <br /><br />
 
           Using the multithreaded requests, a missing key was attempting to write to the cache when another had already written at the same time. In this case, since this is only for testing purposes, the key is put back on the queue. The queuing is done by Python's queue library which is helpful when doing multithreaded processing since it has blocking and timeout features.
 
-          <br /><br />
 
-          Lastly, let’s do a more realistic queue situation that’s not just focused on response times. For PostgreSQL the pg_cron was enabled to start a cron job to clear the cache table of old records on a 20 minute timer. Since the S3.lis trace takes about 4 hours it seems reasonable. Really though, Redis and Memcache use some kind of least recently used (LRU) or least frequently used caching (LFU) method or maybe a mix like in the ARC paper.
-
-          <br /><br />
-
-          In PostgreSQL, the unlogged table could be given a last used attribute but it would require a write during the which feels icky when actually trying to represent a cache. I’m pretty sure Redis and Memcache use a more clever approach and move a recently read identifier from its place in a doubly linked list to the front of it. This allows for constant time updating which I've seen implemented before.
-
-          <br /><br />
-
-          Perhaps I’ll explore later what a last used time could do to make a PostgreSQL cache more LRU like.
-          <br /><br />
           <br /><br />
           <b>More on infrastructure and code:</b>
           <br /><br />
 
-          Docker Compose was used to make PostgreSQL with pg_cron, Redis, and Memcached container instances. The container_config folder has the compose.yaml and Dockerfile settings. The PostgreSQL pg_cron Dockerfile and scripts were implemented referencing [3] which was super useful and one of first posts I looked at regard PostgreSQL caching.
+          Infrastructure containers were provisioned using Docker Compose for PostgreSQL with pg_cron, Redis, and Memcached. The container_config folder has the compose.yaml and Dockerfile settings. The PostgreSQL pg_cron Dockerfile and scripts were implemented referencing [3] which was super useful and one of the first posts I looked at regarding PostgreSQL caching.
+
 
           <br /><br />
 
-          <a href="url">https://github.com/paulcb/amazething-website-cdk/blob/main/lib/common/maze-generator.ts</a>
-          
+          <a href="https://github.com/paulcb/cache_test_app/blob/main/container_config/compose.yaml">cache_test_app/container_config/compose.yaml</a>
+
           <pre>
-            <code class="language-python" style={{fontSize: '13px'}}>
+            <code class="language-python" style={{ fontSize: '13px' }}>
               {dockerCompose}
             </code>
           </pre>
 
-          The driver for testing was Python since some easy to use libraries for Redis and Memcached exist.
-
           <br /><br />
 
-          PostgreSQL connecting and SQLAlchemy ORM libraries made commit sessions and database implementation a breeze.
+          PostgreSQL connecting and SQLAlchemy ORM libraries made commit sessions and database implementation using automapping and class tables.
 
           <br /><br />
 
           The various caches are organized into classes that rely on a base cache class that make use of Python wacky class inheritance. For example, Python method overrides aren’t verbose in any way but there is a library to achieve that with _.
 
           <br /><br />
+          <pre>
+            <code class="language-bash">
+            {appFiles}
+            </code>
+          </pre>
 
-          See. cache.py, and other…
+          <a href="https://github.com/paulcb/cache_test_app/blob/main/app/app.py">cache_test_app/app/cache.py</a>
+
+          <pre>
+            <code class="language-python" style={{ fontSize: '13px' }}>
+              {cacheWorkerCode}
+            </code>
+          </pre>
 
           <br /><br />
 
-          Lastly, the scripts folder contains the various scripts used to generate random trace file data and out an accompanying sql file which Docker postgres can load in its entry point location. The ARC paper trace files are here but not included in the repo. There are some comment lines in places for configuring the ARC paper trace files if it peaks one's interest.
+          <a href="https://github.com/paulcb/cache_test_app/blob/main/app/redis_cache.py">cache_test_app/app/redis_cache.py</a>
+
+          <pre>
+            <code class="language-python" style={{ fontSize: '13px' }}>
+              {codeString}
+            </code>
+          </pre>
 
           <br /><br />
+
+          <br /><br />
+
+          Lastly, the scripts folder contains the various scripts used to generate random trace file data and out an accompanying sql file which Docker postgres can load in its entry point location. The ARC paper trace files are here but not included in the repo. There are some comment lines in places for configuring the ARC paper trace files if it peaks one's interest. A small random trace fill is in the repo to run the app out of the box.
+
+          <br /><br />
+          References:
+          <br />
+          1. https://martinheinz.dev/blog/105
+          <br />
+          2. https://www.usenix.org/legacy/event/fast03/tech/full_papers/megiddo/megiddo.pdf
+          <br />
+          3. https://github.com/moka-rs/cache-trace/tree/main/arc
+          <br />
+
 
 
         </p>
