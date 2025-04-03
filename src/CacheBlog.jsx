@@ -7,7 +7,7 @@ import statTable4 from './assets/Table4.png'
 import errorImage from './assets/trace_error.png'
 import Prism from "prismjs";
 
-import { PROCESS_KEY_CODE, DOCKER_COMPOSE_CODE, CACHE_WORKER_CODE, APP_FILES_LS } from './constants';
+import { PROCESS_KEY_CODE, DOCKER_COMPOSE_CODE, CACHE_WORKER_CODE, APP_FILES_LS, DOCKERFILE_REDIS, POSTGRES_SMT } from './constants';
 
 const repoString = "https://github.com/paulcb/cache_test_app/blob/main"
 
@@ -22,7 +22,7 @@ const CacheBlog = () => {
             <div className="card">
                 <div className="cardDate">4/2/2025</div>
                 <div style={{ display: 'inline' }}>
-                    I Dunno Here's Some Cache Stuff
+                    <b>I Dunno Here's Some Cache Stuff</b>
                     &nbsp;--&nbsp;
                     <a className="carda" href={repoString}>
                         code
@@ -50,6 +50,9 @@ const CacheBlog = () => {
 
                 <br /><br />
 
+                <br /><br /><b>Laying out performace</b>
+                <br /><br />
+
                 In the Table 1 below, ignoring the custom Python Cache control, Redis is overall probably the best choice since it offers best read and write latency. Redis does line up with it in test3. PostgreSQL is what one would expect, an OK choice. Memcached shows significant write latency as more keys are added in test2 and test3. It was taken out of later tests because I got tired of it taking so long to run. These initial tests are just randomly generated test data.
 
                 <br /><br />
@@ -58,11 +61,15 @@ const CacheBlog = () => {
 
                 <br /><br />
 
-                Something to think about: better performance is achieved on reads in PostgreSQL if a standard database table is used to request keys from. There is a performance gained to using UNLOGGED tables as shown. In Table 2, this is shown with no cache table reads and a cache table with unlogged tag removed. Using a PostgreSQL Cache will have benefits on writes [2] and storing unstructured data from more complex queries. Larger databases and doing JOINs, PARTIONs, and or GROUP BY queries could benefit from a cache storing that latter unstructured the data in JSONB attribute. This post is looking general response time and comparing to other caching methods. Perhaps a more complex usage could be included and analyzed in a later post or edit. More complexities would be introduced such as ejecting cache entries on main table updates hence randomized writes.
+                Something to think about: better performance is achieved on reads in PostgreSQL if a standard database table is used to request keys from shown as "PostgreSQL No Cache" in Table 2. There is a performance gained to using UNLOGGED tables. Table 2, shows no cache table reads and a cache table with unlogged tag removed.
 
                 <br /><br />
 
-                Another performance consideration, using a single thread helps performance on all cache types because of queuing within the services which operate on data sequentily. So 2 threads are used in all tests to simulate a more realistic environment. Pretty sure the queuing isn't a result of Python GIL but the various connection instances.
+                Some theory: using a PostgreSQL Cache will have benefits on writes [2] and storing unstructured data from more complex queries. Larger databases and doing JOINs, PARTIONs, and or GROUP BY queries could benefit from a cache storing latter mentioned unstructured data in perhaps a JSONB attribute. This post is looking general response time and comparing to other caching methods. Perhaps a more complex usage could be included and analyzed in a later post or edit. More complexities would be introduced such as ejecting cache entries on main table updates hence randomized writes.
+
+                <br /><br />
+
+                Another performance consideration: using a single thread helps performance on all cache types because of queuing (I think) within the services which operate on data sequentily. So two threads are used in all tests to simulate a more realistic environment. Pretty sure the queuing isn't a result of Python GIL but the various connection instances of the threads (I think).
 
                 <br /><br />
 
@@ -71,9 +78,9 @@ const CacheBlog = () => {
 
                 <br /><br />
 
-                Let's try the ARC paper's trace data in the Table 3.<br />
+                Let's take a look at some of the ARC paper's trace data in the Table 3.<br />
 
-                With realistic traces, performance is similar with the Python Cache performing best since it's a runtime cache in the test suite to show raw performance without a connection in the way. Memcached was left out of these tests given significant write latency. So far though, all these tests have given max memory for the cache types. Let's enable LRU for Redis and Python Cache and give PostgreSQL Cache a cron job to eject old entries in Table 4.
+                With realistic traces, performance is similar with the Python Cache performing best since it's a runtime cache in the test suite to show raw performance without a connection in the way. Memcached was left out of these tests given significant write latency.
 
                 <br /><br />
 
@@ -81,8 +88,37 @@ const CacheBlog = () => {
                 <img src={statTable1} alt="logo" />
 
                 <br /><br />
-                Table 4 - LRU Redis and Python Cache, PostgreSQL pg_cron enabled (remove in cache if greater than 5 mins old) - 2 Threads
 
+                <br /><br /><b>Enabling Cache Policies </b>
+                <br /><br />
+                So far though, all these tests were given max memory for the cache types. Let's enable LRU for Redis and Python Cache and give PostgreSQL Cache a cron job to eject old entries in Table 4.
+
+                <br /><br />
+
+
+                Redis Dockerfile to set LRU policy<br />
+                <a href={repoString + "/container_config/DockerfileRedis"}>cache_test_app/container_config/DockerfileRedis</a>
+                <pre>
+                    <code className="language-text" style={{ fontSize: '13px' }}>
+                        {DOCKERFILE_REDIS}
+                    </code>
+                </pre>
+
+                <br /><br />
+
+                PostgreSQL statment to set pg_cron "cache" policy prior to starting a test
+
+                <br />
+
+                <a href={repoString + "/app/postgres_cache.py"}>cache_test_app/app/postgres_cache.py</a>
+                <pre>
+                    <code className="language-python" style={{ fontSize: '13px' }}>
+                        {POSTGRES_SMT}
+                    </code>
+                </pre>
+
+                <br /><br />
+                Table 4 - LRU Redis and Python Cache, PostgreSQL pg_cron enabled (remove in cache if greater than 5 mins old) - 2 Threads
 
                 <img src={statTable3} alt="logo" />
 
@@ -106,7 +142,7 @@ const CacheBlog = () => {
                 <br /><br />
 
                 <br /><br />
-                <b>Here's an interesting issue that occurred with PostgreSQL.</b>
+                <br /><br /><b>Here's an interesting issue that occurred with PostgreSQL</b>
                 <br /><br />
 
                 <img src={errorImage} alt="logo" />
@@ -115,9 +151,8 @@ const CacheBlog = () => {
 
                 Using the multithreaded requests, a missing key was attempting to write to the cache when another had already written at the same time. In this case, since this is only for testing purposes, the key is put back on the queue. The queuing is done by Python's queue library which is helpful when doing multithreaded processing since it has blocking and timeout features.
 
-
                 <br /><br />
-                <b>More on infrastructure and code:</b>
+                <br /><br /><b>More on infrastructure and code</b>
                 <br /><br />
 
                 Infrastructure containers were provisioned using Docker Compose for PostgreSQL with pg_cron, Redis, and Memcached. The container_config folder has the compose.yaml and Dockerfile settings. The PostgreSQL pg_cron Dockerfile and scripts were implemented referencing [3] which was super useful and one of the first posts I looked at regarding PostgreSQL caching.

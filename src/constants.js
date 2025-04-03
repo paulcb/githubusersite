@@ -41,6 +41,18 @@ export let DOCKER_COMPOSE_CODE = `
 
 `;
 
+export let DOCKERFILE_REDIS = `
+
+# syntax=docker/dockerfile:1
+FROM redis/redis-stack
+RUN cat /opt/redis-stack/etc/redis-stack.conf > /redis-stack.conf
+RUN echo "\nmaxmemory 31000000\n" >> /redis-stack.conf
+RUN echo "maxmemory-policy allkeys-lru\n" >> /redis-stack.conf
+ENTRYPOINT [ "/entrypoint.sh", "/opt/redis-stack/etc/redis-stack.conf" ]
+
+
+`;
+
 export let CACHE_WORKER_CODE = `
 def cache_worker(self, threadNumber):
   # child class specific
@@ -55,6 +67,11 @@ def cache_worker(self, threadNumber):
         continue
 
     self.process_key(cache_conn, key, count, threadNumber)
+`;
+
+export let POSTGRES_SMT = `
+# uncomment to control cache size
+stmt = "SELECT cron.schedule('cache-delete-old', '*/1 * * * *', 'DELETE FROM cache WHERE inserted_at < NOW() - ''300 seconds''::interval;');"
 `;
 
 export let APP_FILES_LS = `
