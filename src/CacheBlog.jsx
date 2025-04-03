@@ -29,20 +29,28 @@ const CacheBlog = () => {
                     </a>
 
                 </div>
-                
+
                 <br /><br />
                 Caching software like Redis and Memcached are gotos for speeding up requests between client and server. Lately, there have been examples showing PostgreSQL’s ability to cache data which might already exist in a platform's infrastructure <a href="https://martinheinz.dev/blog/105">[1]</a>. Using already existing infrastructure is a tempting way to get performance gains. This post looks at PostgreSQL’s cache mechanism and compares to existing caching software.
                 <br /><br />
 
-                Runtimes and mean response times for cache hits and misses are tested for four caching methods, Redis, Memcached, PostgreSQL Unlogged Table, and Python Cache are analyzed. Single instances are used with Python multithreading to simulate concurrent requests. For realistic testing, trace files from “ARC: A SELF-TUNING, LOW OVERHEAD REPLACEMENT CACHE” (ARC paper) are used in testing [2] [3]. Also, a few randomized trace files were generated.
+                Stats included are runtimes and mean response times for cache hits and misses for four caching methods, Redis, Memcached, PostgreSQL Unlogged Table, and Python Cache. Docker single container instances are connect to with a Python multithreading app to simulate concurrent requests. For realistic testing, trace files from “ARC: A SELF-TUNING, LOW OVERHEAD REPLACEMENT CACHE” (ARC paper) are used in testing [2] [3]. Also, a few randomized trace files were tested against.
 
                 <br /><br />
 
-                The caching design is hopefully familiar: database requests are retrieved to fill a cache for later requests. Moreover, a request specifies some identifier from the database. If the identifier didn’t already exist in that case, it’s retrieved from the data store and set in the cache. Since this blog post is just looking into response times a smaller static message size of 16 bytes was given to all trace file values. Making the test like cached website session tokens. In the ARC paper, trace file values depend on the second column for the number of blocks all 512 bytes in size.
+                Python Cache is custom runtime LRU cache used to see raw runtime performace without a service in the way. In comments, regarding performace it is ignored for stating what might be best and used as a control as part of these experiments.<br />
+
+                <a href={repoString + "/app/python_cache.py"}>cache_test_app/app/python_cache.py</a>
+
+
 
                 <br /><br />
 
-                In the Table 1 below, Memcached shows significant write latency. Redis is overall probably the best choice since it offers best read and write latency. PostgreSQL is what one would expect, an OK choice. This is just randomly generated test data. Let's try the ARC paper's trace data in the Table 3.
+                These tests model a hopefully familiar cache design: database requests are retrieved to fill a cache for later requests. Moreover, a request specifies some identifier from the database. If the identifier didn’t already exist in that case, it’s retrieved from the data store and set in the cache. Since this post is just looking into response times, a smaller static message size of 16 bytes (maybe website session tokens) in tests to not incure long runtimes. In the ARC paper, trace file values depend on the second column for the number of blocks all 512 bytes in size.
+
+                <br /><br />
+
+                In the Table 1 below, ignoring the custom Python Cache control, Redis is overall probably the best choice since it offers best read and write latency. Redis does line up with it in test3. PostgreSQL is what one would expect, an OK choice. Memcached shows significant write latency as more keys are added in test2 and test3. It was taken out of later tests because I got tired of it taking so long to run. These initial tests are just randomly generated test data.
 
                 <br /><br />
                 Table 1 - Cache value sizes all 16 bytes - 2 Threads
@@ -50,7 +58,11 @@ const CacheBlog = () => {
 
                 <br /><br />
 
-                Something to think about is that better performance is achieved on reads in PostgreSQL if a standard database table is used to pull from. Using a PostgreSQL Cache will have benefits on writes [2] and storing unstructured data from more complex queries. Larger databases and doing JOINs, PARTIONs, and or GROUP BY queries could benefit from a cache storing unstructured the data in JSONB attribute. This post is looking general response time and comparing to other caching methods. Perhaps this more complex usage could be included and analyzed later. More complexities would be introduced such as ejecting cache entries on main table updates. See Table 2 showing no cache table reads and a cache table with unlogged tag removed. There is a performance gained to using UNLOGGED tables as shown. Moreoever, using a single thread helps performance on all cache types because of queuing within the services which operate on data sequentily. So 2 threads are used in these tests to simulate a more realistic environment.
+                Something to think about: better performance is achieved on reads in PostgreSQL if a standard database table is used to request keys from. There is a performance gained to using UNLOGGED tables as shown. In Table 2, this is shown with no cache table reads and a cache table with unlogged tag removed. Using a PostgreSQL Cache will have benefits on writes [2] and storing unstructured data from more complex queries. Larger databases and doing JOINs, PARTIONs, and or GROUP BY queries could benefit from a cache storing that latter unstructured the data in JSONB attribute. This post is looking general response time and comparing to other caching methods. Perhaps a more complex usage could be included and analyzed in a later post or edit. More complexities would be introduced such as ejecting cache entries on main table updates hence randomized writes.
+
+                <br /><br />
+
+                Another performance consideration, using a single thread helps performance on all cache types because of queuing within the services which operate on data sequentily. So 2 threads are used in all tests to simulate a more realistic environment. Pretty sure the queuing isn't a result of Python GIL but the various connection instances.
 
                 <br /><br />
 
@@ -59,7 +71,9 @@ const CacheBlog = () => {
 
                 <br /><br />
 
-                With realistic traces, performance is similar with the Python Cache performing best since it's a runtime cache in the test suite to show raw performance without a connection in the way. Memcached was left out of these tests given significant write latency. So far though, all these tests have given max memory for the cache types. Let's enable LRU for Redis and Python Cache.
+                Let's try the ARC paper's trace data in the Table 3.<br />
+
+                With realistic traces, performance is similar with the Python Cache performing best since it's a runtime cache in the test suite to show raw performance without a connection in the way. Memcached was left out of these tests given significant write latency. So far though, all these tests have given max memory for the cache types. Let's enable LRU for Redis and Python Cache and give PostgreSQL Cache a cron job to eject old entries in Table 4.
 
                 <br /><br />
 
@@ -129,12 +143,12 @@ const CacheBlog = () => {
 
                 <br /><br />
                 <pre>
-                    <code className="language-bash">
+                    <code className="language-bash" style={{ fontSize: '13px' }}>
                         {APP_FILES_LS}
                     </code>
                 </pre>
 
-                <a href={repoString + "app/app.py"}>cache_test_app/app/cache.py</a>
+                <a href={repoString + "app/cache.py"}>cache_test_app/app/cache.py</a>
 
                 <pre>
                     <code className="language-python" style={{ fontSize: '13px' }}>
