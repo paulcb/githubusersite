@@ -74,6 +74,46 @@ export let POSTGRES_SMT = `
 stmt = "SELECT cron.schedule('cache-delete-old', '*/1 * * * *', 'DELETE FROM cache WHERE inserted_at < NOW() - ''300 seconds''::interval;');"
 `;
 
+
+export let POSTGRES_PROCESS_KEY = `
+def process_key(self, Session, key, count, threadNumber):
+  stime = time.time()
+  session = Session()
+  session.begin()
+  try:
+      cacheRes = self.postres_cache_get(key, session)
+      if cacheRes:
+          self.log_cache(threadNumber, count, stime,
+                          cacheRes.key, cacheRes.value, True, False)
+      else:
+          # there is a case when no key
+          value = fetch_data_auto(self.SourceTable, key, None, session)
+          if value is None:
+              raise Exception("Excepting existing key!")
+          
+          cache = CacheTable(
+              key=key, value=value)
+          session.add(cache)
+          session.commit()
+          self.log_cache(threadNumber, count, stime,
+                          key, value, False, False)
+      
+  except IntegrityError as error:
+      # Either a key was written to the cache right before writing here or a different issue occured that needs a rollback. So just rollback and put value back on the queue. In this application only performance is being tested so ignoring the error will suffice
+
+      # or the key could be thrown back on the queue
+      self.keyQueue.put((key, count))
+
+      session.rollback()
+      print(error)
+  except Exception as ex:
+      session.rollback()
+      print(ex)
+      traceback.print_exc()
+
+  session.close()
+`;
+
 export let APP_FILES_LS = `
 ls -1 cache_test_app/
 README.md

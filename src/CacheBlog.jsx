@@ -7,7 +7,7 @@ import statTable4 from './assets/Table4.png'
 import errorImage from './assets/trace_error.png'
 import Prism from "prismjs";
 
-import { PROCESS_KEY_CODE, DOCKER_COMPOSE_CODE, CACHE_WORKER_CODE, APP_FILES_LS, DOCKERFILE_REDIS, POSTGRES_SMT } from './constants';
+import { PROCESS_KEY_CODE, DOCKER_COMPOSE_CODE, CACHE_WORKER_CODE, APP_FILES_LS, DOCKERFILE_REDIS, POSTGRES_SMT, POSTGRES_PROCESS_KEY } from './constants';
 
 const repoString = "https://github.com/paulcb/cache_test_app/blob/main"
 
@@ -137,9 +137,7 @@ const CacheBlog = () => {
 
                 <br /><br />
 
-                To speak to the inconsistency of Redis and Python Cache using an LRU vs. the pg_cron method in PostgreSQL, an unlogged table could be given a last used attribute, but it would require a write during the which feels icky when actually trying to represent a cache. I’m pretty sure Redis and Memcache use a more clever approach and move a recently read identifier from its place in a doubly linked list to the front of it. This allows for constant time updating which I've seen implemented before. With PostgreSQL there's isn't going to be a constant time update so at least for tests here, the remove oldest cache times will be used.
-
-                <br /><br />
+                To speak to Redis and PostgreSQL Cache using different caching policies, LRU vs. the pg_cron, an unlogged table could be given a last used attribute, but it would need a write during the each fetch which feels icky when actually trying to represent a cache. I’m pretty sure Redis and Memcache use a more clever approach and move a recently read identifier from its place in a doubly linked list to the front of it. This allows for constant time updating which the Python Cache does with llist library. With PostgreSQL there's isn't going to be a constant time update so at least for tests, so removing oldest caches entries is a start here. Let's explore in a later post or edit. No promises.
 
                 <br /><br />
                 <br /><br /><b>Here's an interesting issue that occurred with PostgreSQL</b>
@@ -149,13 +147,25 @@ const CacheBlog = () => {
 
                 <br /><br />
 
-                Using the multithreaded requests, a missing key was attempting to write to the cache when another had already written at the same time. In this case, since this is only for testing purposes, the key is put back on the queue. The queuing is done by Python's queue library which is helpful when doing multithreaded processing since it has blocking and timeout features.
+                Using multithreaded requests, a missing key was attempting to write to the cache when another had already written at the same time. A handle full or more of these happen per test. In this case, since this is only for testing purposes :), the key is put back on the queue. Queuing is done by Python's queue library which is helpful when doing multithreaded processing since it has blocking and timeout features. The issue here must be common. There is no guarantee that a database unique attribute won't throw an integrity error unless some careful programing is done and all requests are sequential. Browsing through the trace files, it occurs on sequential initial key reads of the same id which makes sense. Two requests compete.
+
+                <br /><br />
+
+                <a href={repoString + "/app/postgres_cache.py"}>cache_test_app/app/postgres_cache.py</a>
+
+                <pre>
+                    <code className="language-python" style={{ fontSize: '13px' }}>
+                        {POSTGRES_PROCESS_KEY}
+                    </code>
+                </pre>
+
+                <br /><br />
 
                 <br /><br />
                 <br /><br /><b>More on infrastructure and code</b>
                 <br /><br />
 
-                Infrastructure containers were provisioned using Docker Compose for PostgreSQL with pg_cron, Redis, and Memcached. The container_config folder has the compose.yaml and Dockerfile settings. The PostgreSQL pg_cron Dockerfile and scripts were implemented referencing [3] which was super useful and one of the first posts I looked at regarding PostgreSQL caching.
+                Infrastructure containers were provisioned using Docker Compose for PostgreSQL with pg_cron, Redis, and Memcached. The container_config folder has the compose.yaml and Dockerfile settings. The PostgreSQL pg_cron Dockerfile and scripts were implemented referencing [3] which was super useful and one of the first posts I looked at regarding PostgreSQL caching. The repos README.md has more info on installing and running this if interested.
 
 
                 <br /><br />
@@ -174,7 +184,7 @@ const CacheBlog = () => {
 
                 <br /><br />
 
-                The various caches are organized into classes that rely on a base cache class that make use of Python wacky class inheritance. For example, Python method overrides aren’t verbose in any way but there is a library to achieve that with _.
+                The various caches are organized into classes that rely on a base cache class that make use of Python wacky class inheritance. For example, Python method overrides aren’t verbose in any way but there is a library to help with that: abc.
 
                 <br /><br />
                 <pre>
@@ -205,7 +215,7 @@ const CacheBlog = () => {
 
                 <br /><br />
 
-                Lastly, the scripts folder contains the various scripts used to generate random trace file data and out an accompanying sql file which Docker postgres can load in its entry point location. The ARC paper trace files are here but not included in the repo. There are some comment lines in places for configuring the ARC paper trace files if it peaks one's interest. A small random trace fill is in the repo to run the app out of the box.
+                Lastly, the scripts folder contains the various scripts used to generate random trace file data and out an accompanying sql file which Docker postgres can load in its entry point location. The ARC paper trace files are here [3] and not included in the repo. There are some commented lines in places for configuring the ARC paper trace files if it peaks one's interest. A small random trace fill is in the repo to run the app out of the box.
 
                 <br /><br />
                 References:
@@ -216,6 +226,7 @@ const CacheBlog = () => {
                 <br />
                 3. https://github.com/moka-rs/cache-trace/tree/main/arc
                 <br />
+                <br /><br />
             </div>
 
         </>
