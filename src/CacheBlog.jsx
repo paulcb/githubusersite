@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Link } from "react-router-dom";
 
 import statTable1 from './assets/Table1.1.png'
 import statTable2 from './assets/Table2.1.png'
@@ -34,15 +35,17 @@ const CacheBlog = () => {
                 Caching software like Redis and Memcached are gotos for speeding up requests between client and server. Lately, there have been examples showing PostgreSQL’s ability to cache data which might already exist in a platform's infrastructure <a href="https://martinheinz.dev/blog/105">[1]</a>. Using already existing infrastructure is a tempting way to get performance gains. This post looks at PostgreSQL’s cache mechanism and compares to existing caching software.
                 <br /><br />
 
-                Stats included are runtimes and mean response times for cache hits and misses for four caching methods, Redis, Memcached, PostgreSQL Unlogged Table, and Python Cache. Docker single container instances are connect to with a Python multithreading app to simulate concurrent requests. For realistic testing, trace files from “ARC: A SELF-TUNING, LOW OVERHEAD REPLACEMENT CACHE” (ARC paper) are used in testing [2] [3]. Also, a few randomized trace files were tested against.
+                Building this understanding of cache infrastructure and performace, my overall goal is to plan for user usage and ranking statistics in <Link to="/amazething"><b>aMazeThing - An AWS Cloud Game</b></Link> for user to interact with. Then with AWS Fargate or Aurora PostgreSQL, get one of these methods going serverless to gather daily or weekly data and store long term in AWS S3. This post focuses on single instances so a later post or edit could look into replicas and scaling these services.
+
+                <br /><br />
+
+                Caching stats included are runtimes and mean response times, etc. for cache hits and misses for four caching methods, Redis, Memcached, PostgreSQL Unlogged Table, and Python Cache. Docker single container instances are connect to with a Python multithreading app to simulate concurrent requests. For realistic testing, trace files from “ARC: A SELF-TUNING, LOW OVERHEAD REPLACEMENT CACHE” (ARC paper) are used in testing [2] [3]. Also, a few randomized trace files were tested against.
 
                 <br /><br />
 
                 Python Cache is custom runtime LRU cache used to see raw runtime performace without a service in the way. In comments, regarding performace it is ignored for stating what might be best and used as a control as part of these experiments.<br />
 
                 <a href={repoString + "/app/python_cache.py"}>cache_test_app/app/python_cache.py</a>
-
-
 
                 <br /><br />
 
