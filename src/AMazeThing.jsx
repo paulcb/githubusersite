@@ -21,7 +21,7 @@ const AMazeThing = () => {
                 <div className="cardDate">3/3/2025</div>
                 <div style={{ display: 'inline' }}>
                     <a className="carda" href={links.appLink}>
-                        aMazeThing
+                        aMazeThing - An AWS Cloud Game
                     </a>
                     &nbsp;--&nbsp;
                     <a className="carda" href={links.codeLink}>

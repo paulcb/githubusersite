@@ -23,7 +23,7 @@ const CacheBlog = () => {
             <div className="card">
                 <div className="cardDate">4/2/2025</div>
                 <div style={{ display: 'inline' }}>
-                    <b>I Dunno Here's Some Cache Stuff</b>
+                    <b>Cache Blog</b>
                     &nbsp;--&nbsp;
                     <a className="carda" href={repoString}>
                         code
