@@ -5,7 +5,7 @@ const Home = () => {
     return (
         <>
             <p className="read-the-docs">
-                Github Pages Website for showcasing projects, blogs, and more
+                Github Pages Website for showcasing projects, blogs, and more :)
                 <br />
                 - Paul Basinger
             </p>
@@ -14,7 +14,7 @@ const Home = () => {
                 <div style={{ display: 'inline' }}>
                     <Link to="/amazething"><p><b>aMazeThing - An AWS Cloud Game</b></p></Link>
                     aMazeThing is a React Typescript AWS CloudFront powered website that give users endless mazes to solve over and over again!
-                    <br/><br/>
+                    <br /><br />
                 </div>
 
             </div>
@@ -22,9 +22,9 @@ const Home = () => {
             <div className="card">
                 <div className="cardDate">4/2/2025</div>
                 <div style={{ display: 'inline' }}>
-                <Link to="/cacheblog"><p><b>Cache Blog</b></p></Link>
-                A look at performance of Redis, Memcached, and PostgreSQL caching
-                <br/><br/>
+                    <Link to="/cacheblog"><p><b>Cache Blog</b></p></Link>
+                    A look at performance of Redis, Memcached, and PostgreSQL caching
+                    <br /><br />
                 </div>
             </div>
         </>
