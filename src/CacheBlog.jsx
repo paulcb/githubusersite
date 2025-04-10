@@ -173,7 +173,7 @@ const CacheBlog = () => {
 
                 <br /><br />
 
-                <a href={repoString + "container_config/compose.yaml"}>cache_test_app/container_config/compose.yaml</a>
+                <a href={repoString + "/container_config/compose.yaml"}>cache_test_app/container_config/compose.yaml</a>
 
                 <pre>
                     <code className="language-python" style={{ fontSize: '13px' }}>
@@ -196,7 +196,7 @@ const CacheBlog = () => {
                     </code>
                 </pre>
 
-                <a href={repoString + "app/cache.py"}>cache_test_app/app/cache.py</a>
+                <a href={repoString + "/app/cache.py"}>cache_test_app/app/cache.py</a>
 
                 <pre>
                     <code className="language-python" style={{ fontSize: '13px' }}>
@@ -206,7 +206,7 @@ const CacheBlog = () => {
 
                 <br /><br />
 
-                <a href={repoString + "app/redis_cache.py"}>cache_test_app/app/redis_cache.py</a>
+                <a href={repoString + "/app/redis_cache.py"}>cache_test_app/app/redis_cache.py</a>
 
                 <pre>
                     <code className="language-python" style={{ fontSize: '13px' }}>
