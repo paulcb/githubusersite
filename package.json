@@ -7,6 +7,7 @@
     "dev": "vite --host",
     "build": "vite build",
     "deploy": "npx gh-pages -b master -r git@github.com:paulcb/paulcb.github.io.git -d dist",
+    "deployDev": "npx gh-pages -b main -r git@github.com:paulcb/pagesdev.git -d dist",
     "lint": "eslint .",
     "preview": "vite preview"
   },

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";
 
 
 import './App.css'
@@ -9,14 +9,14 @@ import CacheBlog from './CacheBlog';
 function App() {
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route path="/" element={<Home />}>
         </Route>
         <Route path="/amazething" element={<AMazeThing />} />
         <Route path="/cacheblog" element={<CacheBlog />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
